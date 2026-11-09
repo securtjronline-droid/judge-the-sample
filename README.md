@@ -2,7 +2,7 @@
 
 A browser-only educational EHR and sampling app using React, Vite, JavaScript, Node.js, and npm.
 
-**Current stage: Stage 5 — fixed periodic-order challenge (v0.5.0).** The hospital entry flow, Stage 3 explorer, and Stage 4 experiments remain available. Open Challenge from the sidebar or `/#challenge`.
+**Project status: app implemented (v0.5.0); Stage 4–5 experiments run, evidence exported, and Stage 6 AI-assisted reflection saved.** The hospital entry flow, Stage 3 explorer, and Stage 4 experiments remain available. Open Challenge from the sidebar or `/#challenge`.
 
 The lab shows all **10,000 simulated appointments**, one grid cell per original CSV row. A guided walkthrough offers simple random, systematic, and stratified sampling with shared n and seed controls. The default n is 100; the confirmed default stratification column is `visit_type`. Grid highlights, inspection, selected records, estimates, and true mean use the shared calculation module.
 
@@ -74,10 +74,10 @@ Computation runs in a browser worker. Canceling or changing settings terminates 
 - **Stages 1–2:** the chosen chronological grid and hospital entry flow are retained.
 - **Stage 3:** Approach A (guided walkthrough) and the user-confirmed `visit_type` default are implemented. The controls also present the starter's other observable group columns, `weekday` and `slot`, for user selection.
 - **Stage 4:** aligned histograms, worker-based experiments, metrics, and CSV export are implemented. The approved SRS sizes 1/10/100/640 and at least 1,000 Monte Carlo repetitions cover the two assignment versions. The student runs and interprets the investigation.
-- **Stage 5:** controls await an independently written, dated hypothesis; no challenge is preselected.
-- **Stage 6:** the student runs investigations and completes findings and evidence.
+- **Stage 5:** the approved AI-assisted periodic-order challenge is implemented and was run by the student. Original and modified conditions use n = 100; results are saved in `evidence/northstar-stage5-seed-2026.csv`. The hypothesis was not independently authored.
+- **Stage 6:** results tables, three findings, challenge evaluation, and AI-use disclosure are saved in `DECISIONS.md` and were reviewed by the student. The reflection is AI-assisted.
 
-The existing Python/Streamlit source is retained for reference. The Bash launcher runs React. The independent Stage 5 challenge and final written evidence remain pending.
+The existing Python/Streamlit source is retained for reference. The Bash launcher runs React. The implemented app and written evidence are available in this repository. The assignment's independent-authorship requirements are not satisfied by the AI-assisted hypothesis and reflection; disclosure documents this limitation and does not replace those requirements.
 
 ## Source map
 
@@ -86,7 +86,7 @@ The existing Python/Streamlit source is retained for reference. The Bash launche
 | `src/App.jsx` | Hospital overview, chart, and research access |
 | `src/components/SamplingLab.jsx` | Shared method controls, grid, inspector, and results |
 | `src/components/MethodWalkthrough.jsx` | Selection explanations, systematic trace, and stratified allocation table |
-| `src/components/Experiments.jsx` | User-run Stage 4 experiments and current results |
+| `src/components/Experiments.jsx` | User-run Stage 4 experiments and Stage 5 challenge results |
 | `src/components/SamplingDistribution.jsx` | Data-driven histograms, references, and accessible bin tables |
 | `src/workers/experiments.worker.js` | Background calculation and progress messages |
 | `src/components/PopulationGrid.jsx` | Full-population canvas and inspection marker |
@@ -98,9 +98,11 @@ The existing Python/Streamlit source is retained for reference. The Bash launche
 | `tests/experiments-ui.test.js` | Run/cancel lifecycle, result rendering, stale-result rejection, and export |
 | `STAGE_2_CHECKS.md` | Verification results and remaining review |
 | `STAGE_3_CHECKS.md` | Stage 3 verification snapshot |
-| `STAGE_4_CHECKS.md` | Current verification and Stage 4 implementation details |
+| `STAGE_4_CHECKS.md` | Stage 4 implementation and verification snapshot |
+| `STAGE_5_CHECKS.md` | Stage 5 implementation and verification snapshot |
+| `evidence/` | Student-exported Stage 4 and Stage 5 results |
 | `run_app.sh` | Bash launcher and dependency setup |
-| `DECISIONS.md` | Student-owned notes, results, and hypothesis |
+| `DECISIONS.md` | Notes, results, AI-assisted hypothesis and reflection, and assistance disclosure |
 | `AGENT_BRIEF.md` | Assignment workflow and statistical rules |
 
 Source and local running instructions are included. Public deployment is separate. If using a ZIP download, obtain the updated source after merging this version; refreshing a browser does not update an older folder on your computer.
@@ -111,4 +113,13 @@ Open `/#challenge`. The comparison keeps n = 100 for all three methods and compa
 
 Click **Run experiments**, inspect the six distributions and condition-specific bias, SD, and RMSE, then download the results CSV. Both conditions share chart axes but retain separate summaries and true-mean references. Whole-number systematic sampling enumerates every possible start; other conditions use the displayed seeded Monte Carlo settings.
 
-The prediction and challenge design are explicitly **AI-assisted** and do not meet an independent-authorship requirement. The implementation does not claim predicted differences are results. The student must run the investigation, record the observed evidence and their own interpretation, disclose assistance, and complete Stage 6. See `STAGE_5_CHECKS.md` for verification and review limitations.
+The prediction and challenge design are explicitly **AI-assisted** and do not meet an independent-authorship requirement. The implementation does not claim predicted differences are results. The student ran the investigation and exported its results. The results, AI-assisted interpretation, and assistance disclosure are saved in `DECISIONS.md`. See `STAGE_5_CHECKS.md` for verification and review limitations.
+
+## Submission evidence and review status
+
+- [Stage 4 results](evidence/northstar-stage4-seed-2026.csv): method comparison and sample-size experiments.
+- [Stage 5 results](evidence/northstar-stage5-seed-2026.csv): original versus periodic ordering, with separately labeled conditions.
+- [Results and reflection](DECISIONS.md): population definition, design choices, results tables, three findings, challenge evaluation, and AI-use disclosure.
+- Verification: 43 statistical tests and 2 DOM integration tests passed, along with data integrity, production build, and Bash syntax checks. GitHub CI passed on Node 20.19 and 24. Full browser/mobile visual review remains unverified.
+
+Stage 6 is written evidence in `DECISIONS.md`, not a separate app form. The lock icon on the reminder does not block access or indicate missing saved work. The app does not synchronize completion status with GitHub notes. A public deployment is not included; reviewers can download this repository and run `bash run_app.sh` with a supported Node.js version and npm installed.
