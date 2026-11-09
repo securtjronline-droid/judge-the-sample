@@ -1,14 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Activity, ArrowDown, ArrowLeft, ArrowRight, BarChart3, Check, CheckCircle2, ChevronLeft, ChevronRight, CircleHelp, ClipboardList, Database, FlaskConical, Grid2X2, HeartPulse, Hospital, LayoutDashboard, LockKeyhole, Microscope, Search, ShieldCheck, Sparkles, UserRound } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Activity, ArrowDown, ArrowLeft, ArrowRight, CheckCircle2, ChevronRight, CircleHelp, ClipboardList, Database, FlaskConical, Grid2X2, HeartPulse, Hospital, LayoutDashboard, Microscope, ShieldCheck, UserRound } from 'lucide-react';
 import { parseClinicCsv } from './lib/population.js';
-import { temporarySample, validateSeed } from './lib/sampling.js';
-import PopulationGrid from './components/PopulationGrid.jsx';
+import SamplingLab from './components/SamplingLab.jsx';
 
 const populationPromise = import('../data/clinic_visits.csv?raw')
   .then(module => ({ rows: parseClinicCsv(module.default) }))
   .catch(error => ({ error: error.message }));
 const number = value => value.toLocaleString('en-US');
-const minutes = value => value.toFixed(4);
 const rowLabel = value => String(value).padStart(5, '0');
 const pages = {
   dashboard: ['Clinical workspace', 'Hospital overview'],
@@ -62,7 +60,7 @@ function App() {
           <NavItem icon={ShieldCheck} active={page === 'quality'} onClick={() => navigate('quality')}>Quality & Safety</NavItem>
           <div className="nav-divider" />
           <div className="workspace-label">RESEARCH WORKSPACE</div>
-          <NavItem icon={FlaskConical} active={page === 'lab'} onClick={() => navigate('lab')}>Sampling Lab <span className="nav-stage">02</span></NavItem>
+          <NavItem icon={FlaskConical} active={page === 'lab'} onClick={() => navigate('lab')}>Sampling Lab <span className="nav-stage">03</span></NavItem>
         </nav>
         <div className="sidebar-study">
           <Icon as={Microscope} size={21} />
@@ -83,7 +81,7 @@ function App() {
           {page === 'quality' && <Quality rows={rows} navigate={navigate} />}
           {page === 'lab' && <SamplingLab rows={rows} />}
         </main>
-        <footer className="app-footer"><span>Northstar Memorial Hospital <span aria-hidden="true">·</span> Educational simulation</span><span>Original clinic CSV <span aria-hidden="true">·</span> Browser-based calculations</span></footer>
+        <footer className="app-footer"><span>Northstar Memorial Hospital <span aria-hidden="true">·</span> Educational simulation · v0.3.0</span><span>Original clinic CSV <span aria-hidden="true">·</span> Browser-based calculations</span></footer>
       </div>
     </div>
   );
@@ -154,7 +152,7 @@ function Quality({ rows, navigate }) {
     <div className="page hospital-page">
       <button className="back-link" onClick={() => navigate('chart')}><Icon as={ArrowLeft} size={15} />Return to visit chart</button>
       <div className="page-heading"><div><p className="eyebrow">QUALITY & SAFETY</p><h1>Research & Analytics</h1><p className="page-subtitle">A purposeful connection between clinical records and statistical inquiry.</p></div></div>
-      <section className="study-launch"><div className="study-art" aria-hidden="true"><span className="study-cross">+</span><div className="study-art-icon"><Icon as={FlaskConical} size={54} /></div><span className="study-small-dot dot-blue" /><span className="study-small-dot dot-violet" /><span className="study-small-dot dot-coral" /></div><div className="study-launch-copy"><Pill tone="blue">INTERACTIVE TEACHING STUDY</Pill><h2>Clinic waiting times.<br />A population worth exploring.</h2><p>Enter the Sampling Lab to see every appointment, inspect a reproducible sample, and compare its estimate with the true population mean.</p><PrimaryButton onClick={() => navigate('lab')}>Launch Sampling Lab</PrimaryButton><small>Stage 2 · Population visualization · Temporary SRS of 100</small></div></section>
+      <section className="study-launch"><div className="study-art" aria-hidden="true"><span className="study-cross">+</span><div className="study-art-icon"><Icon as={FlaskConical} size={54} /></div><span className="study-small-dot dot-blue" /><span className="study-small-dot dot-violet" /><span className="study-small-dot dot-coral" /></div><div className="study-launch-copy"><Pill tone="blue">INTERACTIVE TEACHING STUDY</Pill><h2>Clinic waiting times.<br />A population worth exploring.</h2><p>Enter the Sampling Lab to see every appointment, explore three reproducible sampling methods, and compare each estimate with the true population mean.</p><PrimaryButton onClick={() => navigate('lab')}>Launch Sampling Lab</PrimaryButton><small>Stage 3 · Sampling Methods Explorer · Default sample size 100</small></div></section>
       <div className="study-facts"><RegistryStat icon={Database} label="Finite population" value={number(rows.length)} detail="Appointments in this file only" /><RegistryStat icon={Activity} label="Target variable" value="wait_time" detail="Waiting time in minutes" /><RegistryStat icon={ShieldCheck} label="Source" value="Simulated" detail="Course teaching dataset" /></div>
       <section className="panel provenance"><div><p className="eyebrow">KNOW YOUR DATA</p><h2>One file. One finite population.</h2><p>The file covers 100 weeks, with five weekdays and 20 slots each day. Records remain in their original order: week, weekday, then appointment slot.</p></div><dl><div><dt>Source file</dt><dd>data/clinic_visits.csv</dd></div><div><dt>Data generation seed</dt><dd>20261105</dd></div><div><dt>Scope</dt><dd>These {number(rows.length)} appointments—not all clinics or patients.</dd></div></dl></section>
       <div className="context-note"><Icon as={CircleHelp} /><p>The current chart is an entry point. Opening the lab uses all {number(rows.length)} appointments; it does not filter the population to that chart.</p></div>
@@ -162,71 +160,5 @@ function Quality({ rows, navigate }) {
   );
 }
 
-function SamplingLab({ rows }) {
-  const [seed, setSeed] = useState(2026);
-  const [draftSeed, setDraftSeed] = useState('2026');
-  const [error, setError] = useState('');
-  const [inspected, setInspected] = useState(0);
-  const [rowInput, setRowInput] = useState('1');
-  const [rowError, setRowError] = useState('');
-  const sample = useMemo(() => temporarySample(rows, seed), [rows, seed]);
-  const selected = useMemo(() => new Set(sample.indices), [sample]);
-  const selectedOrder = useMemo(() => [...sample.indices].sort((a, b) => a - b), [sample]);
-  const record = rows[inspected];
-  const start = Math.min(Math.max(0, inspected - 9), rows.length - 20);
-  function inspect(index) { setInspected(index); setRowInput(String(index + 1)); setRowError(''); }
-  function draw(event) {
-    event.preventDefault();
-    try {
-      if (!/^\d+$/.test(draftSeed)) throw new Error('Use a whole-number seed from 0 to 4,294,967,295.');
-      setSeed(validateSeed(Number(draftSeed))); setError('');
-    } catch (issue) { setError(issue.message); }
-  }
-  function inspectRow(event) {
-    event.preventDefault();
-    const value = Number(rowInput);
-    if (!/^\d+$/.test(rowInput) || !Number.isInteger(value) || value < 1 || value > rows.length) {
-      setRowError('Choose an appointment row from 1 to ' + number(rows.length) + '.'); return;
-    }
-    inspect(value - 1);
-  }
-  function nextSelected() { inspect(selectedOrder.find(index => index > inspected) ?? selectedOrder[0]); }
-  return (
-    <div className="page lab-page">
-      <div className="lab-heading"><div><p className="eyebrow"><FlaskConical size={14} aria-hidden="true" />NORTHSTAR MEMORIAL HOSPITAL · SAMPLING LAB</p><h1>Small samples.<br className="mobile-only" /> Bigger understanding<span>.</span></h1><p className="page-subtitle">See the population. Trace the selection. Know what your estimate represents.</p></div><Pill tone="violet"><Sparkles size={13} aria-hidden="true" />Stage 2 · Population explorer</Pill></div>
-      <nav className="stage-navigation" aria-label="Assignment stages"><span className="stage done"><Check size={13} aria-hidden="true" /><span>1. Population</span></span><span className="stage current" aria-current="step"><span className="stage-number">2</span>Visualization</span>{['Methods', 'Experiments', 'Challenge', 'Evidence'].map((label, index) => <span className="stage pending" key={label}><LockKeyhole size={12} aria-hidden="true" /><span>{index + 3}. {label}</span></span>)}</nav>
-      <section className="temporary-banner"><span className="temporary-icon"><Icon as={FlaskConical} size={18} /></span><div><strong>Temporary simple random sample · n = 100</strong><p>This Stage 2 sample tests your chosen display. Appointments are selected without replacement. The three-method explorer comes in Stage 3.</p></div><span className="temporary-badge">DISPLAY CHECK</span></section>
-      <div className="results-grid" aria-live="polite" aria-atomic="true">
-        <ResultCard label="Selected appointments" value={number(sample.n)} unit={'/ ' + number(sample.N)} detail="100 distinct records · no replacement" tone="blue" icon={Grid2X2} />
-        <ResultCard label="Single-sample estimate" value={minutes(sample.estimate)} unit="min" detail="Arithmetic mean of the selected waiting times" tone="coral" icon={BarChart3} />
-        <ResultCard label="True population mean" value={minutes(sample.truth)} unit="min" detail="Arithmetic mean of all 10,000 appointments" tone="yellow" icon={Database} reference />
-      </div>
-      <section className="panel population-panel">
-        <div className="panel-heading population-panel-heading"><div><p className="eyebrow">THE FULL POPULATION</p><h2>10,000 appointments. Every row accounted for.</h2><p className="muted">One cell = one appointment · Original CSV order</p></div><Pill tone="green"><CheckCircle2 size={13} aria-hidden="true" />{number(sample.n)} selected</Pill></div>
-        <div className="lab-controls"><div className="method-key"><span className="method-symbol" /><div><strong>Simple random sampling</strong><small>Temporary Stage 2 selection</small></div></div><form className="seed-controls" onSubmit={draw}><label htmlFor="seed">Random seed<input id="seed" inputMode="numeric" value={draftSeed} onChange={event => setDraftSeed(event.target.value)} aria-describedby={error ? 'seed-error' : 'seed-help'} /></label><button className="button primary" type="submit"><Icon as={Sparkles} size={15} />Draw sample</button><button className="button secondary" type="button" onClick={() => { const next = (seed + 1) >>> 0; setSeed(next); setDraftSeed(String(next)); setError(''); }}>Next seed <Icon as={ArrowRight} size={14} /></button></form></div>
-        {error && <p role="alert" className="validation-error" id="seed-error">{error}</p>}
-        <div className="grid-and-inspector">
-          <div className="population-main"><PopulationGrid rows={rows} sample={sample} inspected={inspected} onInspect={inspect} /><div className="grid-legend"><span><i className="legend-cell population-cell" />Unselected appointment</span><span><i className="legend-cell sample-cell" />Selected appointment</span><span><i className="legend-cell inspect-cell" />Inspected row</span></div></div>
-          <aside className="row-inspector" aria-labelledby="inspector-title"><p className="eyebrow">LOOK CLOSER</p><h3 id="inspector-title">Appointment inspector</h3><p className="muted">Hover, tap, or enter a row number.</p><form className="row-search" onSubmit={inspectRow}><label htmlFor="row-number">CSV row<input id="row-number" inputMode="numeric" value={rowInput} onChange={event => setRowInput(event.target.value)} aria-describedby={rowError ? 'row-error' : undefined} /></label><button type="submit" className="button secondary" aria-label="Inspect appointment row"><Icon as={Search} size={16} /></button></form>{rowError && <p className="validation-error" id="row-error" role="alert">{rowError}</p>}<div className="inspector-record"><div className="inspector-record-top"><span>AP-{rowLabel(record.visit_id)}</span><Pill tone={selected.has(inspected) ? 'blue' : ''}>{selected.has(inspected) ? 'Selected' : 'Unselected'}</Pill></div><dl className="record-list"><div><dt>Week</dt><dd>{record.week}</dd></div><div><dt>Weekday</dt><dd>{record.weekday}</dd></div><div><dt>Appointment slot</dt><dd>{record.slot}</dd></div><div><dt>Visit type</dt><dd>{record.visit_type}</dd></div></dl><div className="inspector-wait"><span>Waiting time</span><strong>{record.wait_time}<small> min</small></strong></div></div><button className="text-button next-selected" onClick={nextSelected}>Inspect next selected row <Icon as={ArrowRight} size={14} /></button><div className="inspection-hint"><CircleHelp size={16} aria-hidden="true" /><p>Inspecting a row never adds it to the sample. Selection is determined only by the sampling rule and seed.</p></div></aside>
-        </div>
-        <div className="magnifier"><div className="magnifier-heading"><div><p className="eyebrow">MAGNIFIED ROW-ORDER STRIP</p><h3>Follow the appointments, one row at a time.</h3></div><span>Rows {number(start + 1)}–{number(start + 20)}</span></div><div className="row-strip">{rows.slice(start, start + 20).map((row, offset) => { const index = start + offset; return <button key={row.visit_id} className={'strip-cell ' + (selected.has(index) ? 'is-selected ' : '') + (inspected === index ? 'is-inspected' : '')} onClick={() => inspect(index)} aria-label={'Inspect row ' + row.visit_id + ', ' + row.wait_time + ' minutes, ' + (selected.has(index) ? 'selected' : 'unselected')} aria-pressed={inspected === index}>{row.visit_id}</button>; })}</div><p>Row numbers identify the original records. Blue fill and coral outlines mark the same selected appointments as the full grid.</p></div>
-        <div className="selection-rule"><div><Icon as={CircleHelp} size={18} /><strong>The selection rule</strong></div><p>Draw exactly 100 distinct row positions randomly without replacement from all {number(rows.length)} appointments. Estimate = the mean of their <code>wait_time</code> values.</p><div className="run-metadata" id="seed-help"><span>Seed <strong>{sample.seed}</strong></span><span>Sample size <strong>{sample.n}</strong></span><span>Population <strong>Original CSV</strong></span><span>Single-sample error <strong>{sample.error >= 0 ? '+' : ''}{minutes(sample.error)} min</strong></span></div><p className="rule-footnote">The same seed reproduces the same sample. “Next seed” changes the displayed seed; different seeds can occasionally give the same selection. A single sample’s error is not repeated-sampling bias or evidence that a method is superior.</p></div>
-      </section>
-      <SelectedRecords rows={rows} indices={selectedOrder} seed={seed} />
-      <div className="next-stage-note"><span className="next-stage-icon"><LockKeyhole size={19} aria-hidden="true" /></span><div><strong>Next: Sampling Methods Explorer</strong><p>Stage 3 will add systematic and stratified sampling after your interaction and stratification decisions are confirmed.</p></div><span className="next-stage-number">03</span></div>
-    </div>
-  );
-}
-
-function ResultCard({ label, value, unit, detail, tone, icon, reference }) {
-  return <div className={'result-card result-' + tone}><div className="result-label"><span>{label}</span><Icon as={icon} size={16} /></div><div className="result-value">{reference && <span className="reference-mark" aria-hidden="true" />}<strong>{value}</strong><span>{unit}</span></div><p>{detail}</p></div>;
-}
-
-function SelectedRecords({ rows, indices, seed }) {
-  const [page, setPage] = useState(0);
-  useEffect(() => setPage(0), [seed]);
-  const pageSize = 10, max = Math.ceil(indices.length / pageSize);
-  return <section className="panel selected-records"><div className="panel-heading"><div><p className="eyebrow">VERIFY THE SELECTION</p><h2>Selected appointment records</h2></div><span className="muted">{indices.length} distinct rows · Seed {seed}</span></div><div className="table-wrap"><table><caption className="sr-only">Selected records in original CSV row order, ten per page</caption><thead><tr><th scope="col">CSV row</th><th scope="col">Week</th><th scope="col">Weekday</th><th scope="col">Slot</th><th scope="col">Visit type</th><th scope="col">Wait time (min)</th></tr></thead><tbody>{indices.slice(page * pageSize, (page + 1) * pageSize).map(index => { const row = rows[index]; return <tr key={row.visit_id}><th scope="row"><span className="selected-row-dot" />{row.visit_id}</th><td>{row.week}</td><td>{row.weekday}</td><td>{row.slot}</td><td>{row.visit_type}</td><td>{row.wait_time}</td></tr>; })}</tbody></table></div><div className="table-pagination"><span>Rows {page * pageSize + 1}–{Math.min((page + 1) * pageSize, indices.length)} of {indices.length} selected records</span><div><button className="button secondary" disabled={page === 0} onClick={() => setPage(value => value - 1)} aria-label="Previous selected records"><Icon as={ChevronLeft} size={16} /></button><span aria-live="polite">Page {page + 1} of {max}</span><button className="button secondary" disabled={page === max - 1} onClick={() => setPage(value => value + 1)} aria-label="Next selected records"><Icon as={ChevronRight} size={16} /></button></div></div></section>;
-}
 
 export default App;

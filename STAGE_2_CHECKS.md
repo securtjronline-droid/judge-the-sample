@@ -1,5 +1,7 @@
 # Stage 2 implementation and verification
 
+This is the Stage 2 verification snapshot. See STAGE_3_CHECKS.md for the current method explorer and checks.
+
 ## Implemented
 
 - Node/npm setup with pinned dependencies and a lockfile.
