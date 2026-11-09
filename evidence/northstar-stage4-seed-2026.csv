@@ -1,0 +1,7 @@
+"Experiment","Population","Method","n","N","Type","Seed","Repetitions or starts","Stratification column","Allocation and population weights","True mean (min)","Mean estimate (min)","Bias (min)","SD of estimates (min)","RMSE (min)"
+"Methods at n = 100; also SRS n = 100","Baseline · Original CSV","Simple random","100","10000","Monte Carlo","2026","1000","","","22.6842","22.838540000000002","0.15434000000000125","1.4682402624911224","1.476330011887586"
+"Methods at n = 100","Baseline · Original CSV","Systematic","100","10000","Exact","Exact; no seed","100","","","22.6842","22.6842","0","6.95671189284133","6.95671189284133"
+"Methods at n = 100","Baseline · Original CSV","Stratified","100","10000","Monte Carlo","2026","1000","visit_type","Follow-up: nh=55, Nh=5475, weight=0.5475; New: nh=25, Nh=2469, weight=0.2469; Same-day: nh=20, Nh=2056, weight=0.2056","22.6842","22.67630313418182","-0.007896865818182164","1.3018178735863812","1.3018418246771448"
+"SRS sample sizes","Baseline · Original CSV","Simple random","1","10000","Monte Carlo","2026","1000","","","22.6842","22.266","-0.41820000000000235","13.730740839444898","13.737107964924785"
+"SRS sample sizes","Baseline · Original CSV","Simple random","10","10000","Monte Carlo","2026","1000","","","22.6842","22.734900000000003","0.05070000000000263","4.666327462791268","4.666602884326028"
+"SRS sample sizes","Baseline · Original CSV","Simple random","640","10000","Monte Carlo","2026","1000","","","22.6842","22.697015625","0.01281562499999822","0.5310791083135443","0.5312337146033279"
