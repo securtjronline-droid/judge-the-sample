@@ -121,8 +121,11 @@ export function fractionalSystematicIndices(N, n, numerator, denominator) {
 }
 
 export function systematicSelection(N, n, seed) {
+  return systematicWithRandom(N, n, createSeededRandom(seed));
+}
+
+function systematicWithRandom(N, n, rng) {
   validateSize(N, n);
-  const rng = createSeededRandom(seed);
   const interval = N / n;
   if (N % n === 0) {
     const start = rng.intBelow(interval) + 1;
@@ -200,9 +203,16 @@ export function populationWeightedMean(strata) {
 
 export function stratifiedSelection(rows, n, seed, column = 'visit_type') {
   validateSize(rows.length, n);
+  return stratifiedWithPlan(rows, n, createSeededRandom(seed), column, prepareStrata(rows, n, column));
+}
+
+function prepareStrata(rows, n, column) {
   const groups = populationStrata(rows, column);
   const allocation = proportionalAllocation(groups.map(group => group.populationSize), n);
-  const rng = createSeededRandom(seed);
+  return { groups, allocation };
+}
+
+function stratifiedWithPlan(rows, n, rng, column, { groups, allocation }) {
   const strata = groups.map((group, i) => {
     const indices = drawRandomIndices(group.populationSize, allocation[i], rng).map(position => group.positions[position]);
     return { key: group.key, populationSize: group.populationSize, weight: group.weight, quota: n * group.populationSize / rows.length, allocation: allocation[i], indices, sampleMean: sampleMean(rows, indices) };
@@ -210,15 +220,146 @@ export function stratifiedSelection(rows, n, seed, column = 'visit_type') {
   return { indices: strata.flatMap(group => group.indices), strata, estimate: populationWeightedMean(strata), weightSum: strata.reduce((sum, group) => sum + group.weight, 0), column };
 }
 
+function prepareGenerator(rows, { method, n, column }) {
+  validateSize(rows.length, n);
+  if (method === 'simple') return rng => {
+    const indices = drawRandomIndices(rows.length, n, rng);
+    return { indices, estimate: sampleMean(rows, indices) };
+  };
+  if (method === 'systematic') return rng => {
+    const selection = systematicWithRandom(rows.length, n, rng);
+    return { ...selection, estimate: sampleMean(rows, selection.indices) };
+  };
+  if (method === 'stratified') {
+    const plan = prepareStrata(rows, n, column);
+    return rng => stratifiedWithPlan(rows, n, rng, column, plan);
+  }
+  throw new RangeError('Unknown sampling method.');
+}
+
 export function drawSample(rows, { method = 'simple', n = 100, seed = 2026, column = 'visit_type' } = {}) {
   validateSize(rows.length, n);
   validateSeed(seed);
-  let selection;
-  if (method === 'simple') selection = { indices: simpleRandomIndices(rows.length, n, seed) };
-  else if (method === 'systematic') selection = systematicSelection(rows.length, n, seed);
-  else if (method === 'stratified') selection = stratifiedSelection(rows, n, seed, column);
-  else throw new RangeError('Unknown sampling method.');
+  const selection = prepareGenerator(rows, { method, n, column })(createSeededRandom(seed));
   const truth = populationMean(rows);
-  const estimate = method === 'stratified' ? selection.estimate : sampleMean(rows, selection.indices);
+  const estimate = selection.estimate;
   return { ...selection, method, n, N: rows.length, seed, truth, estimate, error: estimate - truth };
+}
+
+export function summarizeEstimates(estimates, truth) {
+  if (!Number.isFinite(truth)) throw new RangeError('The true mean must be finite.');
+  const estimateMean = mean(estimates);
+  const bias = estimateMean - truth;
+  const sd = Math.sqrt(mean(estimates.map(value => (value - estimateMean) ** 2)));
+  const rmse = Math.sqrt(mean(estimates.map(value => (value - truth) ** 2)));
+  return { estimateMean, bias, sd, rmse };
+}
+
+export function repeatSampling(rows, { method = 'simple', n = 100, seed = 2026, repetitions = 1000, column = 'visit_type' } = {}, onSample) {
+  validateSize(rows.length, n);
+  const truth = populationMean(rows);
+  const exact = method === 'systematic' && rows.length % n === 0;
+  const estimates = [];
+  let allocation = null;
+  if (exact) {
+    for (let start = 1; start <= rows.length / n; start += 1) {
+      const indices = wholeSystematicIndices(rows.length, n, start);
+      estimates.push(sampleMean(rows, indices));
+      onSample?.({ indices, start });
+    }
+  } else {
+    if (!Number.isInteger(repetitions) || repetitions < 1000) throw new RangeError('Monte Carlo requires at least 1,000 whole-number repetitions.');
+    const rng = createSeededRandom(seed);
+    const generate = prepareGenerator(rows, { method, n, column });
+    for (let i = 0; i < repetitions; i += 1) {
+      const selection = generate(rng);
+      estimates.push(selection.estimate);
+      onSample?.(selection);
+      if (i === 0 && selection.strata) allocation = selection.strata.map(({ key, populationSize, weight, allocation }) => ({ key, populationSize, weight, allocation }));
+    }
+  }
+  return {
+    condition: 'Baseline · Original CSV',
+    method, n, N: rows.length,
+    type: exact ? 'Exact' : 'Monte Carlo',
+    seed: exact ? null : seed,
+    runs: estimates.length,
+    column: method === 'stratified' ? column : null,
+    allocation,
+    truth, estimates,
+    ...summarizeEstimates(estimates, truth),
+  };
+}
+
+export const BASELINE_SIZES = [1, 10, 100, 640];
+
+export function runBaselineExperiments(rows, { seed = 2026, repetitions = 1000, column = 'visit_type' } = {}, onProgress) {
+  validateSeed(seed);
+  if (!Number.isInteger(repetitions) || repetitions < 1000 || repetitions > 10000) throw new RangeError('Choose 1,000–10,000 Monte Carlo repetitions.');
+  BASELINE_SIZES.forEach(n => validateSize(rows.length, n));
+  const tasks = [
+    { method: 'simple', n: 100 },
+    { method: 'systematic', n: 100 },
+    { method: 'stratified', n: 100 },
+    { method: 'simple', n: 1 },
+    { method: 'simple', n: 10 },
+    { method: 'simple', n: 640 },
+  ];
+  const results = tasks.map((task, index) => {
+    onProgress?.({ completed: index, total: tasks.length, method: task.method, n: task.n });
+    const result = repeatSampling(rows, { ...task, seed, repetitions, column });
+    onProgress?.({ completed: index + 1, total: tasks.length, method: task.method, n: task.n });
+    return result;
+  });
+  return {
+    settings: { seed, repetitions, column, N: rows.length, condition: 'Baseline · Original CSV' },
+    methods: results.slice(0, 3),
+    sizes: [results[3], results[4], results[0], results[5]],
+  };
+}
+
+// Probability per shared bin makes exact and Monte Carlo results comparable
+// when their number of starts/repetitions differs.
+export function comparisonHistograms(results, binCount = 20) {
+  if (!results.length || !Number.isInteger(binCount) || binCount < 2 || binCount > 100) throw new RangeError('Invalid histogram configuration.');
+  const first = results[0];
+  let minimum = Infinity, maximum = -Infinity;
+  for (const result of results) {
+    if (result.condition !== first.condition || result.N !== first.N || result.truth !== first.truth) throw new RangeError('Do not pool populations or conditions in a comparison.');
+    for (const value of [...result.estimates, result.truth, result.estimateMean]) {
+      if (!Number.isFinite(value)) throw new RangeError('Histogram values must be finite.');
+      minimum = Math.min(minimum, value); maximum = Math.max(maximum, value);
+    }
+    if (!result.estimates.length || result.runs !== result.estimates.length) throw new RangeError('Estimate count must match the run label.');
+  }
+  const padding = maximum === minimum ? Math.max(1, Math.abs(minimum) * 0.05) : (maximum - minimum) * 0.07;
+  const xMin = minimum - padding, xMax = maximum + padding;
+  const width = (xMax - xMin) / binCount;
+  const series = results.map(result => {
+    const bins = Array.from({ length: binCount }, (_, i) => ({ lower: xMin + i * width, upper: xMin + (i + 1) * width, count: 0 }));
+    result.estimates.forEach(value => {
+      const index = Math.max(0, Math.min(binCount - 1, Math.floor((value - xMin) / width)));
+      bins[index].count += 1;
+    });
+    bins.forEach(bin => { bin.probability = bin.count / result.runs; });
+    return bins;
+  });
+  const yMax = Math.min(1, Math.max(...series.flatMap(bins => bins.map(bin => bin.probability))) * 1.12);
+  return { xMin, xMax, yMax, series };
+}
+
+export function experimentCsv(resultSet) {
+  const names = { simple: 'Simple random', systematic: 'Systematic', stratified: 'Stratified' };
+  const headers = ['Experiment', 'Population', 'Method', 'n', 'N', 'Type', 'Seed', 'Repetitions or starts', 'Stratification column', 'Allocation and population weights', 'True mean (min)', 'Mean estimate (min)', 'Bias (min)', 'SD of estimates (min)', 'RMSE (min)'];
+  const records = [
+    ...resultSet.methods.map(result => [result === resultSet.sizes[2] ? 'Methods at n = 100; also SRS n = 100' : 'Methods at n = 100', result]),
+    ...resultSet.sizes.filter(result => !resultSet.methods.includes(result)).map(result => ['SRS sample sizes', result]),
+  ].map(([experiment, result]) => [
+    experiment, result.condition, names[result.method], result.n, result.N, result.type,
+    result.type === 'Exact' ? 'Exact; no seed' : result.seed, result.runs, result.column ?? '',
+    result.allocation ? result.allocation.map(group => group.key + ': nh=' + group.allocation + ', Nh=' + group.populationSize + ', weight=' + group.weight).join('; ') : '',
+    result.truth, result.estimateMean, result.bias, result.sd, result.rmse,
+  ]);
+  const quote = value => '"' + String(value).replaceAll('"', '""') + '"';
+  return [headers, ...records].map(record => record.map(quote).join(',')).join('\r\n') + '\r\n';
 }

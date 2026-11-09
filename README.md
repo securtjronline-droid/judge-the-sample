@@ -2,7 +2,7 @@
 
 A browser-only educational EHR and sampling app using React, Vite, JavaScript, Node.js, and npm.
 
-**Current stage: Stage 3 — Sampling Methods Explorer (v0.3.0).** Open a simulated visit chart from the hospital dashboard, navigate to Quality & Safety / Research & Analytics, and launch the Sampling Lab.
+**Current stage: Stage 4 — repeated-sampling experiments (v0.4.0).** The hospital entry flow and Stage 3 explorer remain available. Open Experiments from the sidebar or the Stage 3 lab.
 
 The lab shows all **10,000 simulated appointments**, one grid cell per original CSV row. A guided walkthrough offers simple random, systematic, and stratified sampling with shared n and seed controls. The default n is 100; the confirmed default stratification column is `visit_type`. Grid highlights, inspection, selected records, estimates, and true mean use the shared calculation module.
 
@@ -57,15 +57,27 @@ Data provenance and reuse details are in `data/README.md`. The original CSV is u
 
 The demo patient identity is fictional navigation context. The source CSV contains appointment records, not named patient histories.
 
+## Stage 4: run and record your investigation
+
+1. Open **Experiments** (or the local route `/#experiments`).
+2. Choose a Monte Carlo seed, 1,000–10,000 repetitions (default 1,000), and the observable stratification column (default `visit_type`).
+3. Click **Run experiments** yourself. Opening the page never runs an investigation.
+4. Experiment A compares all three methods at **n = 100**. Experiment B uses SRS at **n = 1, 10, 100, and 640**, covering both guide/starter size sets approved in the conversation.
+5. Whole-number systematic sampling enumerates all N/n starts and is labeled **Exact**, with no seed. Other required results are seeded **Monte Carlo**. The same SRS n = 100 result is reused.
+6. Read aligned distributions, true-mean and mean-estimate references, bias, SD of estimates, and RMSE in minutes. Histograms use probability per shared bin, allowing exact and Monte Carlo counts to differ. Scales are shared within each experiment.
+7. Inspect accessible bin tables or allocation details, then download the six unique current results as CSV and record your own findings in `DECISIONS.md`.
+
+Computation runs in a browser worker. Canceling or changing settings terminates the current job and clears previous results. Rerunning replaces the current result set; it never appends or pools conditions. No results are prefilled or generated during setup. Repeated-sampling tests use synthetic populations.
+
 ## Staged workflow
 
 - **Stages 1–2:** the chosen chronological grid and hospital entry flow are retained.
 - **Stage 3:** Approach A (guided walkthrough) and the user-confirmed `visit_type` default are implemented. The controls also present the starter's other observable group columns, `weekday` and `slot`, for user selection.
-- **Stage 4:** aligned histograms are planned. Resolve the guide/repository sample-size and repetition-count difference before implementation.
+- **Stage 4:** aligned histograms, worker-based experiments, metrics, and CSV export are implemented. The approved SRS sizes 1/10/100/640 and at least 1,000 Monte Carlo repetitions cover the two assignment versions. The student runs and interprets the investigation.
 - **Stage 5:** controls await an independently written, dated hypothesis; no challenge is preselected.
 - **Stage 6:** the student runs investigations and completes findings and evidence.
 
-The existing Python/Streamlit source is retained for reference. The Bash launcher runs React. Stages 4–6 remain pending.
+The existing Python/Streamlit source is retained for reference. The Bash launcher runs React. The independent Stage 5 challenge and final written evidence remain pending.
 
 ## Source map
 
@@ -74,13 +86,19 @@ The existing Python/Streamlit source is retained for reference. The Bash launche
 | `src/App.jsx` | Hospital overview, chart, and research access |
 | `src/components/SamplingLab.jsx` | Shared method controls, grid, inspector, and results |
 | `src/components/MethodWalkthrough.jsx` | Selection explanations, systematic trace, and stratified allocation table |
+| `src/components/Experiments.jsx` | User-run Stage 4 experiments and current results |
+| `src/components/SamplingDistribution.jsx` | Data-driven histograms, references, and accessible bin tables |
+| `src/workers/experiments.worker.js` | Background calculation and progress messages |
 | `src/components/PopulationGrid.jsx` | Full-population canvas and inspection marker |
 | `src/lib/population.js` | CSV parsing and validation |
 | `src/lib/sampling.js` | Shared seeded randomness, SRS, and means |
 | `tests/sampling.test.js` | Statistical and data-integrity checks |
+| `tests/experiments.test.js` | Repeated estimates, summaries, enumeration, histograms, and export checks |
 | `tests/ui.test.js` | DOM integration check of navigation and lab controls |
+| `tests/experiments-ui.test.js` | Run/cancel lifecycle, result rendering, stale-result rejection, and export |
 | `STAGE_2_CHECKS.md` | Verification results and remaining review |
-| `STAGE_3_CHECKS.md` | Current checks and Stage 3 implementation details |
+| `STAGE_3_CHECKS.md` | Stage 3 verification snapshot |
+| `STAGE_4_CHECKS.md` | Current verification and Stage 4 implementation details |
 | `run_app.sh` | Bash launcher and dependency setup |
 | `DECISIONS.md` | Student-owned notes, results, and hypothesis |
 | `AGENT_BRIEF.md` | Assignment workflow and statistical rules |
