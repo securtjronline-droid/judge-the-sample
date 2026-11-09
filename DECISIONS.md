@@ -17,10 +17,10 @@ my agent about it, and do not edit it afterwards; add a dated revision below ins
 
 For each stage: the option I chose, why, and what it is meant to help a user learn.
 
-- Stage 2, visualization (include one visual feature meant to reveal a sampling problem):
-- Stage 3, sampling interactions and stratification column:
-- Stage 4, presentation of the method comparison and sample-size experiments:
-- Stage 5, challenge controls:
+- Stage 2, visualization (include one visual feature meant to reveal a sampling problem): A chronological grid containing all 10,000 appointments, with one cell per CSV row. Selected appointments are highlighted while unselected appointments remain visible. Row-order labels and a magnified selection strip make gaps and repeated spacing inspectable. This helps users connect the selection pattern with actual appointment records. The sample estimate appears beside the labeled true population mean.
+- Stage 3, sampling interactions and stratification column: Approach A, a guided walkthrough using the same grid for all three methods. Users change sample size and seed, inspect the selection rule, and see the selected rows and estimate update. Proposed stratification column: visit_type, which has three observable groups—Follow-up, New, and Same-day—keeping the allocation and weighting table compact. Show each group’s population size, sample allocation, and population weight. This choice does not assume better statistical performance.
+- Stage 4, presentation of the method comparison and sample-size experiments: Separate, aligned histograms with shared scales within each experiment, a clearly labeled true-mean reference line, and bias, SD, and RMSE cards in minutes. Keep the method comparison and sample-size comparison in distinct sections. Label every result exact or Monte Carlo and display its settings. Confirm the required sample sizes and repetition count against the assignment version before implementation.
+- Stage 5, challenge controls: Independently write and date the challenge hypothesis before planning controls. Then select controls that test that hypothesis, preserve the original population, and compare baseline and modified conditions using the required sampling rules and equal sample sizes.
 
 ## 3. Results table
 
