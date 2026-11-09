@@ -1,48 +1,57 @@
-# Setup, running and backup
+# Setup and running
 
-## You need
+## Required tools
 
-- A Bash terminal: Terminal on macOS/Linux; **Git Bash** or **WSL** on Windows (PowerShell and
-  Command Prompt cannot run `bash run_app.sh`).
-- `git`, and Python 3.10+ (or Node.js 20+ if you and your agent choose a JavaScript app).
-- An AI coding agent that can read and edit this folder and has a **Plan mode**.
+- Node.js **24 LTS**, including npm. The pinned dependencies also accept Node 20.19+ or 22.12+.
+- Git for cloning/checking out the GitHub project.
+- Bash: Terminal on macOS/Linux, or Git Bash/WSL on Windows.
+- A modern browser.
+
+The app runs in the browser. Node/npm manage dependencies, development, production builds, and automated statistical tests.
 
 ## First run
 
-1. Unzip the starter and open the folder in your agent.
-2. Give it the starting prompt from the guide's *Setup & run* page. It reads `AGENT_BRIEF.md`,
-   inspects the data and project, explains the setup and prepares the environment.
-3. Check the data loads: `python3 load_data.py data/<your file>.csv` (on Windows Git Bash, `python` may be the command).
-
-## Run the app (after stage 2)
+Open a Bash terminal in the directory containing `package.json` and `run_app.sh`:
 
 ```bash
+node --version
+npm --version
+npm ci
+npm run check:data
+npm run test:stats
+npm run test:ui
 bash run_app.sh
 ```
 
-- Run it yourself, in a terminal whose current folder is this project.
-- Open the address it prints (usually `http://localhost:` followed by a port number).
-- Stop it with **Ctrl+C** in that terminal.
-- If it fails, copy the **first error line** and the command you ran into your agent. On Windows,
-  `\r` or "bad interpreter" errors mean Windows line endings: ask the agent to save `run_app.sh`
-  with LF line endings (`.gitattributes` already asks git to keep them).
+Open the printed address, normally **http://127.0.0.1:5173**. Press **Ctrl+C** to stop.
 
-## Back up with git
+The launcher enters its own directory, checks Node compatibility, and runs `npm ci` if dependencies are missing or the lockfile changed. Initial installation needs npm registry access.
 
-Create an empty repository on GitHub (or your course's host), then in this folder:
+## Development and production
+
+Run these separately, stopping a server before starting another:
 
 ```bash
-git init -b main
-git add .
-git commit -m "Starter"
-git remote add origin https://github.com/<username>/<repository>.git
-git push -u origin main
+npm run dev
+npm run build
+npm run preview
 ```
 
-Commit and push after each stage. A commit is not a backup until it is pushed. Never commit passwords or API keys.
+Development uses port 5173; production preview uses port 4173. The build output is `dist/`.
 
-## Publishing (optional unless your course requires it)
+Dependencies are pinned in `package.json` and `package-lock.json`. Use `npm ci` for an existing checkout. When deliberately changing a dependency, use `npm install --save-exact PACKAGE@VERSION` and commit both package files.
 
-Running locally with `bash run_app.sh` is enough for this activity unless your instructor asks
-for a public link. If they do, see the guide's *Setup & run* page. A published app must do live
-sampling and user-controlled challenges itself; static exported results are not enough.
+## Troubleshooting
+
+- **Node/npm not found:** install Node, reopen the terminal, and repeat the checks.
+- **Unsupported Node version:** use Node 24 LTS or a version in the supported range above.
+- **Port occupied:** stop the earlier server or use `PORT=5174 bash run_app.sh`.
+- **Launcher missing:** change into the project directory.
+- **Bash line-ending error:** save the launcher with LF endings; `.gitattributes` specifies them.
+- **Data validation error:** restore the original CSV and run `npm run check:data`. Malformed records are rejected rather than replaced with invented values.
+
+## Assignment workflow
+
+The student uses the running Stage 2 app to check the display, records decisions and evidence in `DECISIONS.md`, and confirms later design choices before implementation. Stage 2 does not run the later investigations.
+
+Python/Streamlit files are retained as legacy source. Python is not needed by the new launcher.
