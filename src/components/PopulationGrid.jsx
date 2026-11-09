@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef } from 'react';
+import { METHOD_DISPLAY, stratumDisplay } from '../lib/method-display.js';
 
-export default function PopulationGrid({ rows, sample, inspected, onInspect }) {
+export default function PopulationGrid({ rows, sample, inspected, onInspect, method = 'simple', strata = [], column = 'visit_type' }) {
   const canvas = useRef(null);
   const selected = useMemo(() => new Set(sample.indices), [sample.indices]);
   const rowCount = Math.ceil(rows.length / 100);
+  const groupIndices = useMemo(() => new Map(strata.map((group, i) => [group.key, i])), [strata]);
 
   useEffect(() => {
     const element = canvas.current;
@@ -19,12 +21,21 @@ export default function PopulationGrid({ rows, sample, inspected, onInspect }) {
       for (let i = 0; i < rows.length; i += 1) {
         const x = (i % 100) * cw, y = Math.floor(i / 100) * ch;
         const isSelected = selected.has(i);
-        ctx.fillStyle = isSelected ? '#2563EB' : Math.floor((i % 100) / 20) % 2 ? '#CDDDE7' : '#DAE6ED';
+        const group = stratumDisplay(groupIndices.get(String(rows[i][column])) ?? 0);
+        ctx.fillStyle = isSelected ? (method === 'stratified' ? group.fill : METHOD_DISPLAY[method].color) : method === 'stratified' ? group.tint : Math.floor((i % 100) / 20) % 2 ? '#CDDDE7' : '#DAE6ED';
         ctx.fillRect(x + 0.55, y + 0.55, Math.max(1, cw - 1.1), Math.max(1, ch - 1.1));
         if (isSelected) {
           ctx.strokeStyle = '#FB7185';
           ctx.lineWidth = 1.2;
           ctx.strokeRect(x + 0.35, y + 0.35, Math.max(1, cw - 0.7), Math.max(1, ch - 0.7));
+          if (method === 'stratified' && group.pattern === 1) {
+            ctx.strokeStyle = group.ink;
+            ctx.lineWidth = 0.7;
+            ctx.beginPath(); ctx.moveTo(x + 1, y + ch - 1); ctx.lineTo(x + cw - 1, y + 1); ctx.stroke();
+          } else if (method === 'stratified' && group.pattern === 2) {
+            ctx.fillStyle = group.ink;
+            ctx.fillRect(x + cw / 2, y + ch / 2, Math.min(1.5, cw / 3), Math.min(1.5, ch / 3));
+          }
         }
       }
     }
@@ -32,7 +43,7 @@ export default function PopulationGrid({ rows, sample, inspected, onInspect }) {
     observer.observe(element);
     draw();
     return () => observer.disconnect();
-  }, [rows, rowCount, selected]);
+  }, [rows, rowCount, selected, method, groupIndices, column]);
 
   function inspectAt(event) {
     const rect = canvas.current.getBoundingClientRect();
@@ -51,7 +62,7 @@ export default function PopulationGrid({ rows, sample, inspected, onInspect }) {
           <canvas
             ref={canvas}
             role="img"
-            aria-label="Full population grid: 10,000 appointments in original chronological order. One cell per appointment; 100 selected appointments have blue fill and coral outlines."
+            aria-label={'Full population grid: ' + rows.length + ' appointments in original chronological order. One cell per appointment; ' + sample.indices.length + ' selected appointments have method-colored fill and coral outlines. Method: ' + METHOD_DISPLAY[method].name + (method === 'stratified' ? '. Strata use ' + column + ', with labels and patterns in the legend and allocation table.' : '.')}
             aria-describedby="grid-description"
             onPointerMove={event => { if (event.pointerType === 'mouse') inspectAt(event); }}
             onPointerDown={inspectAt}
