@@ -2,7 +2,7 @@
 
 A browser-only educational EHR and sampling app using React, Vite, JavaScript, Node.js, and npm.
 
-**Current stage: Stage 4 — repeated-sampling experiments (v0.4.0).** The hospital entry flow and Stage 3 explorer remain available. Open Experiments from the sidebar or the Stage 3 lab.
+**Current stage: Stage 5 — fixed periodic-order challenge (v0.5.0).** The hospital entry flow, Stage 3 explorer, and Stage 4 experiments remain available. Open Challenge from the sidebar or `/#challenge`.
 
 The lab shows all **10,000 simulated appointments**, one grid cell per original CSV row. A guided walkthrough offers simple random, systematic, and stratified sampling with shared n and seed controls. The default n is 100; the confirmed default stratification column is `visit_type`. Grid highlights, inspection, selected records, estimates, and true mean use the shared calculation module.
 
@@ -104,3 +104,11 @@ The existing Python/Streamlit source is retained for reference. The Bash launche
 | `AGENT_BRIEF.md` | Assignment workflow and statistical rules |
 
 Source and local running instructions are included. Public deployment is separate. If using a ZIP download, obtain the updated source after merging this version; refreshing a browser does not update an older folder on your computer.
+
+## Stage 5: fixed periodic-order challenge
+
+Open `/#challenge`. The comparison keeps n = 100 for all three methods and compares the original CSV order against a copy sorted into 100 wait-time bands, then interleaved by band. Every appointment and wait-time value is preserved; the original CSV is never changed. Inspect the first ten records before running. Turn periodic ordering off to compare the baseline against an unchanged-order control.
+
+Click **Run experiments**, inspect the six distributions and condition-specific bias, SD, and RMSE, then download the results CSV. Both conditions share chart axes but retain separate summaries and true-mean references. Whole-number systematic sampling enumerates every possible start; other conditions use the displayed seeded Monte Carlo settings.
+
+The prediction and challenge design are explicitly **AI-assisted** and do not meet an independent-authorship requirement. The implementation does not claim predicted differences are results. The student must run the investigation, record the observed evidence and their own interpretation, disclose assistance, and complete Stage 6. See `STAGE_5_CHECKS.md` for verification and review limitations.

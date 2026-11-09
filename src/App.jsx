@@ -15,6 +15,7 @@ const pages = {
   quality: ['Quality & Safety', 'Research & Analytics'],
   lab: ['Research & Analytics', 'Sampling Lab'],
   experiments: ['Research & Analytics', 'Sampling Experiments'],
+  challenge: ['Research & Analytics', 'Sampling Challenge'],
 };
 
 function Icon({ as: Component, ...props }) { return <Component size={18} strokeWidth={1.8} aria-hidden="true" {...props} />; }
@@ -48,7 +49,7 @@ function App() {
   const rows = population.rows;
   const row = rows[chartIndex];
   return (
-    <div className={'app-shell ' + (['lab', 'experiments'].includes(page) ? 'research-mode' : '')}>
+    <div className={'app-shell ' + (['lab', 'experiments', 'challenge'].includes(page) ? 'research-mode' : '')}>
       <a className="skip-link" href="#main-content" onClick={event => { event.preventDefault(); document.getElementById('main-content').focus(); }}>Skip to content</a>
       <aside className="sidebar">
         <button className="brand" onClick={() => navigate('dashboard')} aria-label="Northstar Memorial Hospital home">
@@ -64,6 +65,7 @@ function App() {
           <div className="workspace-label">RESEARCH WORKSPACE</div>
           <NavItem icon={FlaskConical} active={page === 'lab'} onClick={() => navigate('lab')}>Sampling Lab <span className="nav-stage">03</span></NavItem>
           <NavItem icon={BarChart3} active={page === 'experiments'} onClick={() => navigate('experiments')}>Experiments <span className="nav-stage">04</span></NavItem>
+          <NavItem icon={FlaskConical} active={page === 'challenge'} onClick={() => navigate('challenge')}>Challenge <span className="nav-stage">05</span></NavItem>
         </nav>
         <div className="sidebar-study">
           <Icon as={Microscope} size={21} />
@@ -82,10 +84,11 @@ function App() {
           {page === 'dashboard' && <Dashboard rows={rows} openChart={openChart} navigate={navigate} />}
           {page === 'chart' && <VisitChart row={row} navigate={navigate} />}
           {page === 'quality' && <Quality rows={rows} navigate={navigate} />}
-          {page === 'lab' && <SamplingLab rows={rows} onExperiments={() => navigate('experiments')} />}
-          {page === 'experiments' && <Experiments rows={rows} onExplorer={() => navigate('lab')} />}
+          {page === 'lab' && <SamplingLab rows={rows} onExperiments={() => navigate('experiments')} onChallenge={() => navigate('challenge')} />}
+          {page === 'experiments' && <Experiments rows={rows} onExplorer={() => navigate('lab')} onChallenge={() => navigate('challenge')} />}
+          {page === 'challenge' && <Experiments challenge rows={rows} onExplorer={() => navigate('lab')} />}
         </main>
-        <footer className="app-footer"><span>Northstar Memorial Hospital <span aria-hidden="true">·</span> Educational simulation · v0.4.0</span><span>Original clinic CSV <span aria-hidden="true">·</span> Browser-based calculations</span></footer>
+        <footer className="app-footer"><span>Northstar Memorial Hospital <span aria-hidden="true">·</span> Educational simulation · v0.5.0</span><span>Original clinic CSV <span aria-hidden="true">·</span> Browser-based calculations</span></footer>
       </div>
     </div>
   );

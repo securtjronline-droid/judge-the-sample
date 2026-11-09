@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { mean, populationMean, sampleMean, simpleRandomIndices, temporarySample, createSeededRandom, drawSample, systematicSelection, wholeSystematicIndices, fractionalSystematicIndices, proportionalAllocation, populationWeightedMean, InfeasibleStratificationError } from '../src/lib/sampling.js';
+import { mean, populationMean, sampleMean, simpleRandomIndices, temporarySample, createSeededRandom, drawSample, systematicSelection, wholeSystematicIndices, fractionalSystematicIndices, proportionalAllocation, populationWeightedMean, InfeasibleStratificationError, periodicReordering } from '../src/lib/sampling.js';
 import { parseCsv, parseClinicCsv } from '../src/lib/population.js';
 
 const csv = await readFile(new URL('../data/clinic_visits.csv', import.meta.url), 'utf8');
@@ -190,4 +190,12 @@ test('all methods reproduce the same sample, metadata, and estimate for the same
     }
   }
   assert.deepEqual(rows, original);
+});
+
+test('the clinic reordering preserves all 10,000 appointment identities, values, and the true mean', () => {
+  const transformed = periodicReordering(rows, 100);
+  assert.equal(transformed.length, rows.length);
+  assert.equal(new Set(transformed.map(row => row.visit_id)).size, rows.length);
+  transformed.forEach(row => assert.equal(row, rows[row.visit_id - 1]));
+  assert.equal(populationMean(transformed), populationMean(rows));
 });

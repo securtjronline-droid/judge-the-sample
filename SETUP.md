@@ -55,3 +55,7 @@ Dependencies are pinned in `package.json` and `package-lock.json`. Use `npm ci` 
 The student explores selection rules in Stage 3, runs Stage 4 experiments by clicking Run experiments, and records results and interpretations in `DECISIONS.md`. Stage 4 does not generate the independent Stage 5 hypothesis or select its challenge controls.
 
 Python/Streamlit files are retained as legacy source. Python is not needed by the new launcher.
+
+## Stage 5
+
+After updating to v0.5.0, open http://127.0.0.1:5173/#challenge. Click Run experiments, then Download results CSV. Refreshing an older downloaded project does not update its source. Preserve your previous results and notes when obtaining the new version.

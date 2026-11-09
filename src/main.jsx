@@ -4,5 +4,6 @@ import App from './App.jsx';
 import './styles.css';
 import './stage3.css';
 import './stage4.css';
+import './stage5.css';
 
 createRoot(document.getElementById('root')).render(<React.StrictMode><App /></React.StrictMode>);

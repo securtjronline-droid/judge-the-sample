@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mean, repeatSampling, summarizeEstimates, runBaselineExperiments, comparisonHistograms, experimentCsv } from '../src/lib/sampling.js';
+import { mean, repeatSampling, summarizeEstimates, runBaselineExperiments, comparisonHistograms, experimentCsv, periodicReordering, runChallengeExperiments, conditionHistograms } from '../src/lib/sampling.js';
 import { processExperimentRequest } from '../src/workers/experiments.worker.js';
 
 // All repeated-sampling tests use synthetic populations, not the student's
@@ -128,4 +128,54 @@ test('worker request reports progress/results with the request ID and reports er
   processExperimentRequest({ jobId: 'bad-run', rows: tiny, settings: { repetitions: 100 } }, message => errors.push(message));
   assert.equal(errors.at(-1).kind, 'error');
   assert.ok(!errors.some(message => message.kind === 'result'));
+});
+
+test('periodic ordering is the specified stable transpose and preserves every record and value', () => {
+  const data = Array.from({ length: 12 }, (_, i) => ({ visit_id: i + 1, wait_time: i })).reverse();
+  const before = structuredClone(data);
+  const ordered = periodicReordering(data, 3);
+  assert.deepEqual(ordered.map(row => row.wait_time), [0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11]);
+  assert.deepEqual(data, before);
+  assert.equal(new Set(ordered.map(row => row.visit_id)).size, 12);
+  assert.equal(mean(ordered.map(row => row.wait_time)), mean(data.map(row => row.wait_time)));
+  assert.throws(() => periodicReordering(data, 5));
+});
+
+test('challenge conditions use the same n, original estimators, separate means, and complete labels', () => {
+  const original = structuredClone(baselineFixture);
+  const settings = { seed: 17, repetitions: 1000, column: 'visit_type', periodicEnabled: true };
+  const suite = runChallengeExperiments(baselineFixture, settings);
+  assert.deepEqual(baselineFixture, original);
+  assert.equal(suite.methods.length, 3);
+  assert.equal(suite.modified.length, 3);
+  assert.ok([...suite.methods, ...suite.modified].every(result => result.n === 100 && result.N === 1000 && result.truth === mean(baselineFixture.map(row => row.wait_time))));
+  assert.ok(suite.methods.every(result => result.condition.startsWith('Baseline')));
+  assert.ok(suite.modified.every(result => result.condition.startsWith('Modified')));
+  assert.equal(suite.modified[1].type, 'Exact');
+  assert.equal(suite.modified[1].seed, null);
+  assert.deepEqual(suite, runChallengeExperiments(baselineFixture, settings));
+  assert.equal(experimentCsv(suite).trim().split('\r\n').length, 7);
+  const axes = conditionHistograms([suite.methods, suite.modified]);
+  assert.equal(axes[0].xMin, axes[1].xMin);
+  assert.equal(axes[0].xMax, axes[1].xMax);
+  assert.equal(axes[0].yMax, axes[1].yMax);
+});
+
+test('turning periodic ordering off produces a labeled original-order control with identical seeded results', () => {
+  const suite = runChallengeExperiments(baselineFixture, { seed: 17, repetitions: 1000, periodicEnabled: false });
+  suite.methods.forEach((result, i) => {
+    assert.deepEqual(result.estimates, suite.modified[i].estimates);
+    assert.equal(result.truth, suite.modified[i].truth);
+    assert.match(suite.modified[i].condition, /Control/);
+  });
+});
+
+test('challenge worker uses the requested mode and never silently substitutes another mode', () => {
+  const messages = [];
+  processExperimentRequest({ mode: 'challenge', jobId: 'challenge', rows: baselineFixture, settings: { repetitions: 1000, periodicEnabled: false } }, message => messages.push(message));
+  assert.equal(messages.at(-1).kind, 'result');
+  assert.equal(messages.at(-1).result.modified.length, 3);
+  const invalid = [];
+  processExperimentRequest({ mode: 'unknown', jobId: 'invalid', rows: baselineFixture, settings: {} }, message => invalid.push(message));
+  assert.equal(invalid.at(-1).kind, 'error');
 });

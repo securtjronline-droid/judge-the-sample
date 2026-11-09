@@ -6,7 +6,7 @@ import { summarizeEstimates } from '../src/lib/sampling.js';
 
 // Synthetic distribution fixtures test rendering/lifecycle only. They never
 // run the student's clinic experiments or supply production result values.
-function fixture(settings) {
+function fixture(settings, challenge = false) {
   const truth = 22.6842;
   function result(method, n) {
     const exact = method === 'systematic';
@@ -21,6 +21,10 @@ function fixture(settings) {
     };
   }
   const methods = [result('simple', 100), result('systematic', 100), result('stratified', 100)];
+  if (challenge) {
+    const modified = [result('simple', 100), result('systematic', 100), result('stratified', 100)].map(item => ({ ...item, condition: settings.periodicEnabled ? 'Modified · Periodic order (100 bands)' : 'Control · Original order' }));
+    return { settings: { ...settings, n: 100, N: 10000 }, methods, modified, sizes: [] };
+  }
   return { settings: { ...settings, N: 10000, condition: 'Baseline · Original CSV' }, methods, sizes: [result('simple', 1), result('simple', 10), methods[0], result('simple', 640)] };
 }
 
@@ -71,7 +75,7 @@ test('Stage 4 runs only on request, renders labeled distributions, exports CSV, 
       const setter = Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype, 'value').set;
       await interact(() => { setter.call(element, value); element.dispatchEvent(new dom.window.Event('input', { bubbles: true })); element.dispatchEvent(new dom.window.Event('change', { bubbles: true })); });
     }
-    async function complete(record) { await interact(() => record.worker.onmessage({ data: { kind: 'result', jobId: record.request.jobId, result: fixture(record.request.settings) } })); }
+    async function complete(record) { await interact(() => record.worker.onmessage({ data: { kind: 'result', jobId: record.request.jobId, result: fixture(record.request.settings, record.request.mode === 'challenge') } })); }
     root = createRoot(document.getElementById('root'));
     await interact(() => root.render(React.createElement(App)));
     for (let i = 0; i < 15 && !document.querySelector('.experiment-empty'); i += 1) await interact(() => {});
@@ -121,6 +125,31 @@ test('Stage 4 runs only on request, renders labeled distributions, exports CSV, 
     await interact(() => requests[2].worker.onmessage({ data: { kind: 'error', jobId: requests[2].request.jobId, message: 'Synthetic test failure' } }));
     assert.match(document.querySelector('[role="alert"]').textContent, /Synthetic test failure/);
     assert.equal(document.querySelector('.experiment-results'), null);
+    await click('Open Stage 5 challenge');
+    assert.match(document.querySelector('h1').textContent, /Sampling Challenge/);
+    assert.match(document.querySelector('.challenge-proposal').textContent, /AI-assisted/);
+    assert.equal(document.querySelectorAll('.distribution-card').length, 0);
+    const toggle = document.querySelector('.challenge-toggle input');
+    assert.equal(toggle.checked, true);
+    await click('Run experiments');
+    assert.equal(requests.at(-1).request.mode, 'challenge');
+    assert.equal(requests.at(-1).request.settings.periodicEnabled, true);
+    await complete(requests.at(-1));
+    assert.equal(document.querySelectorAll('.distribution-card').length, 6);
+    assert.equal(document.querySelectorAll('.results-table-panel tbody tr').length, 6);
+    assert.equal(document.querySelectorAll('.exact-type').length, 2);
+    assert.match(document.querySelector('.experiment-results').textContent, /Modified/);
+    await click('Download results CSV');
+    assert.equal(downloadedName, 'northstar-stage5-seed-2026.csv');
+    const csv = await downloadedBlob.text();
+    assert.equal(csv.trim().split('\r\n').length, 7);
+    assert.match(csv, /Modified/);
+    await interact(() => toggle.click());
+    assert.equal(document.querySelector('.experiment-results'), null);
+    await click('Run experiments');
+    assert.equal(requests.at(-1).request.settings.periodicEnabled, false);
+    await complete(requests.at(-1));
+    assert.match(document.querySelector('.experiment-results').textContent, /Control · Original order/);
   } finally {
     if (root && act) await act(async () => root.unmount());
     if (server) await server.close();
