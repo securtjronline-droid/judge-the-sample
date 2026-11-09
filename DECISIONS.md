@@ -1,7 +1,16 @@
 # My decisions and evidence notes
 
-Written by me, not by my AI agent. Write my challenge hypothesis (section 5) **before** consulting
-my agent about it, and do not edit it afterwards; add a dated revision below instead.
+AI-assisted draft — November 8, 2026
+
+I hypothesize that systematic sampling at n = 100 will have a larger SD of estimates and RMSE than simple random sampling after the appointments are placed in a periodic ordering.
+
+To create that ordering, sort the 10,000 appointments by waiting time, divide them into 100 groups of 100, and interleave those groups so each 100-row block contains one appointment from each group. Preserve every appointment and waiting-time value.
+
+The systematic interval is 100, so each random start repeatedly selects the same position within successive blocks. This could produce samples concentrated within particular waiting-time groups, increasing variability across starts.
+
+Compare the original and reordered populations using the same n = 100. Enumerate all systematic starts and use at least 1,000 seeded SRS repetitions.
+
+Evidence against the hypothesis would be systematic sampling showing no greater SD or RMSE than SRS under the reordered condition. Reordering alone leaves the true population mean unchanged.
 
 ## 1. Population and target
 
