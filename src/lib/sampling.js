@@ -255,7 +255,7 @@ export function summarizeEstimates(estimates, truth) {
   return { estimateMean, bias, sd, rmse };
 }
 
-export function repeatSampling(rows, { method = 'simple', n = 100, seed = 2026, repetitions = 1000, column = 'visit_type' } = {}, onSample) {
+export function repeatSampling(rows, { method = 'simple', n = 100, seed = 2026, repetitions = 1000, column = 'visit_type', condition = 'Baseline · Original CSV' } = {}, onSample) {
   validateSize(rows.length, n);
   const truth = populationMean(rows);
   const exact = method === 'systematic' && rows.length % n === 0;
@@ -279,7 +279,7 @@ export function repeatSampling(rows, { method = 'simple', n = 100, seed = 2026, 
     }
   }
   return {
-    condition: 'Baseline · Original CSV',
+    condition,
     method, n, N: rows.length,
     type: exact ? 'Exact' : 'Monte Carlo',
     seed: exact ? null : seed,
@@ -320,7 +320,7 @@ export function runBaselineExperiments(rows, { seed = 2026, repetitions = 1000, 
 
 // Probability per shared bin makes exact and Monte Carlo results comparable
 // when their number of starts/repetitions differs.
-export function comparisonHistograms(results, binCount = 20) {
+export function comparisonHistograms(results, binCount = 20, axisRange = null) {
   if (!results.length || !Number.isInteger(binCount) || binCount < 2 || binCount > 100) throw new RangeError('Invalid histogram configuration.');
   const first = results[0];
   let minimum = Infinity, maximum = -Infinity;
@@ -333,7 +333,8 @@ export function comparisonHistograms(results, binCount = 20) {
     if (!result.estimates.length || result.runs !== result.estimates.length) throw new RangeError('Estimate count must match the run label.');
   }
   const padding = maximum === minimum ? Math.max(1, Math.abs(minimum) * 0.05) : (maximum - minimum) * 0.07;
-  const xMin = minimum - padding, xMax = maximum + padding;
+  const xMin = axisRange?.xMin ?? minimum - padding, xMax = axisRange?.xMax ?? maximum + padding;
+  if (!Number.isFinite(xMin) || !Number.isFinite(xMax) || xMin >= xMax || xMin > minimum || xMax < maximum) throw new RangeError('Histogram axes must include every estimate and reference.');
   const width = (xMax - xMin) / binCount;
   const series = results.map(result => {
     const bins = Array.from({ length: binCount }, (_, i) => ({ lower: xMin + i * width, upper: xMin + (i + 1) * width, count: 0 }));
@@ -351,10 +352,13 @@ export function comparisonHistograms(results, binCount = 20) {
 export function experimentCsv(resultSet) {
   const names = { simple: 'Simple random', systematic: 'Systematic', stratified: 'Stratified' };
   const headers = ['Experiment', 'Population', 'Method', 'n', 'N', 'Type', 'Seed', 'Repetitions or starts', 'Stratification column', 'Allocation and population weights', 'True mean (min)', 'Mean estimate (min)', 'Bias (min)', 'SD of estimates (min)', 'RMSE (min)'];
-  const records = [
+  const records = (resultSet.modified ? [
+    ...resultSet.methods.map(result => [result.condition, result]),
+    ...resultSet.modified.map(result => [result.condition, result]),
+  ] : [
     ...resultSet.methods.map(result => [result === resultSet.sizes[2] ? 'Methods at n = 100; also SRS n = 100' : 'Methods at n = 100', result]),
     ...resultSet.sizes.filter(result => !resultSet.methods.includes(result)).map(result => ['SRS sample sizes', result]),
-  ].map(([experiment, result]) => [
+  ]).map(([experiment, result]) => [
     experiment, result.condition, names[result.method], result.n, result.N, result.type,
     result.type === 'Exact' ? 'Exact; no seed' : result.seed, result.runs, result.column ?? '',
     result.allocation ? result.allocation.map(group => group.key + ': nh=' + group.allocation + ', Nh=' + group.populationSize + ', weight=' + group.weight).join('; ') : '',
@@ -362,4 +366,54 @@ export function experimentCsv(resultSet) {
   ]);
   const quote = value => '"' + String(value).replaceAll('"', '""') + '"';
   return [headers, ...records].map(record => record.map(quote).join(',')).join('\r\n') + '\r\n';
+}
+
+export function periodicReordering(rows, bands = 100) {
+  if (!Number.isInteger(bands) || bands < 1 || rows.length === 0 || rows.length % bands !== 0) throw new RangeError('The band count must divide the population size.');
+  const sorted = rows.map((row, index) => ({ row, index })).sort((a, b) => a.row.wait_time - b.row.wait_time || a.index - b.index);
+  const bandSize = rows.length / bands;
+  const reordered = [];
+  for (let offset = 0; offset < bandSize; offset += 1) {
+    for (let band = 0; band < bands; band += 1) reordered.push(sorted[band * bandSize + offset].row);
+  }
+  return reordered;
+}
+
+export function runChallengeExperiments(rows, { seed = 2026, repetitions = 1000, column = 'visit_type', periodicEnabled = true } = {}, onProgress) {
+  validateSeed(seed);
+  validateSize(rows.length, 100);
+  if (!Number.isInteger(repetitions) || repetitions < 1000 || repetitions > 10000) throw new RangeError('Choose 1,000–10,000 Monte Carlo repetitions.');
+  if (typeof periodicEnabled !== 'boolean') throw new RangeError('The ordering control must be explicitly enabled or disabled.');
+  const conditions = [
+    { name: 'Baseline · Original CSV', population: rows },
+    { name: periodicEnabled ? 'Modified · Periodic order (' + rows.length / 100 + ' bands)' : 'Control · Original order', population: periodicEnabled ? periodicReordering(rows, rows.length / 100) : [...rows] },
+  ];
+  const all = [];
+  for (const condition of conditions) {
+    const results = METHODS.map(method => {
+      onProgress?.({ completed: all.length, total: 6, method, n: 100, condition: condition.name });
+      const result = repeatSampling(condition.population, { method, n: 100, seed, repetitions, column, condition: condition.name });
+      all.push(result);
+      onProgress?.({ completed: all.length, total: 6, method, n: 100, condition: condition.name });
+      return result;
+    });
+    condition.results = results;
+  }
+  return {
+    settings: { seed, repetitions, column, periodicEnabled, n: 100, N: rows.length },
+    methods: conditions[0].results,
+    modified: conditions[1].results,
+    sizes: [],
+  };
+}
+
+// Conditions retain separate distributions and summaries. Only the visual
+// axes are synchronized; results are never pooled or averaged together.
+export function conditionHistograms(groups, binCount = 20) {
+  if (!groups.length) throw new RangeError('At least one condition is required.');
+  const preliminary = groups.map(group => comparisonHistograms(group, binCount));
+  const range = { xMin: Math.min(...preliminary.map(chart => chart.xMin)), xMax: Math.max(...preliminary.map(chart => chart.xMax)) };
+  const charts = groups.map(group => comparisonHistograms(group, binCount, range));
+  const yMax = Math.max(...charts.map(chart => chart.yMax));
+  return charts.map(chart => ({ ...chart, yMax }));
 }

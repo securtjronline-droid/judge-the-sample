@@ -1,0 +1,11 @@
+.challenge-proposal{padding:24px;margin-bottom:24px;border-left:4px solid #8b5cf6}
+.challenge-proposal h2{font-size:23px}
+.challenge-proposal>p:not(.eyebrow){font-size:12px;line-height:1.9;color:#526c87;margin-top:14px}
+.challenge-proposal details{font-size:12px;color:#4d4271;margin-top:18px}
+.challenge-proposal summary{cursor:pointer;padding:10px 0}
+.challenge-toggle{display:flex;align-items:center;gap:11px;padding:16px;background:#f0ebfc;border:1px solid #dbcef4;border-radius:6px;font-size:13px;margin-top:18px;color:#4a3473}
+.challenge-toggle input{width:20px;height:20px;accent-color:#8b5cf6;flex-shrink:0}
+.experiments-page .next-stage-note{flex-wrap:wrap}
+.experiments-page .next-stage-note>div{min-width:170px;flex:1}
+.experiments-page .next-stage-note>.button{margin-left:auto}
+@media(max-width:760px){.sidebar nav{grid-template-columns:repeat(3,minmax(0,1fr))}.challenge-proposal{padding:20px 18px}.challenge-proposal h2{font-size:21px}.challenge-toggle{font-size:12px;line-height:1.8}}

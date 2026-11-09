@@ -11,7 +11,7 @@ const rowLabel = value => String(value).padStart(5, '0');
 function Icon({ as: Component, ...props }) { return <Component size={18} strokeWidth={1.8} aria-hidden='true' {...props} />; }
 function Pill({ children, tone = '' }) { return <span className={'pill ' + tone}>{children}</span>; }
 
-function SamplingLab({ rows, onExperiments }) {
+function SamplingLab({ rows, onExperiments, onChallenge }) {
   const [method, setMethod] = useState('simple');
   const [nText, setNText] = useState('100');
   const [column, setColumn] = useState('visit_type');
@@ -58,7 +58,7 @@ function SamplingLab({ rows, onExperiments }) {
   return (
     <div className="page lab-page" data-method={method} style={{ '--method-color': config.color, '--method-ink': config.ink, '--method-tint': config.tint }}>
       <div className="lab-heading"><div><p className="eyebrow"><FlaskConical size={14} aria-hidden="true" />NORTHSTAR MEMORIAL HOSPITAL</p><h1>Sampling Methods Explorer<span>.</span></h1><p className="page-subtitle">One population. Three selection rules. Explore how each appointment enters a sample.</p></div><Pill tone="violet"><Sparkles size={13} aria-hidden="true" />Stage 3 · Guided exploration</Pill></div>
-      <nav className="stage-navigation" aria-label="Assignment stages">{['Population', 'Visualization'].map((label, i) => <span className="stage done" key={label}><Check size={13} aria-hidden="true" /><span>{i + 1}. {label}</span></span>)}<span className="stage current" aria-current="step"><span className="stage-number">3</span>Methods</span><button className="stage available-stage" onClick={onExperiments}>4. Experiments <ArrowRight size={12} aria-hidden="true" /></button>{['Challenge', 'Evidence'].map((label, index) => <span className="stage pending" key={label}><LockKeyhole size={12} aria-hidden="true" /><span>{index + 5}. {label}</span></span>)}</nav>
+      <nav className="stage-navigation" aria-label="Assignment stages">{['Population', 'Visualization'].map((label, i) => <span className="stage done" key={label}><Check size={13} aria-hidden="true" /><span>{i + 1}. {label}</span></span>)}<span className="stage current" aria-current="step"><span className="stage-number">3</span>Methods</span><button className="stage available-stage" onClick={onExperiments}>4. Experiments <ArrowRight size={12} aria-hidden="true" /></button><button className="stage available-stage" onClick={onChallenge}>5. Challenge</button>{['Evidence'].map((label, index) => <span className="stage pending" key={label}><LockKeyhole size={12} aria-hidden="true" /><span>{index + 6}. {label}</span></span>)}</nav>
       <section className="method-picker" aria-label="Sampling methods">{Object.entries(METHOD_DISPLAY).map(([key, item], i) => <button key={key} type="button" data-method={key} aria-pressed={method === key} onClick={() => setMethod(key)}><span className="method-choice-symbol" style={{ background: item.color }} aria-hidden="true" /><span><small>METHOD {i + 1}</small><strong>{item.short}</strong></span><span className="method-choice-mark" aria-hidden="true">{method === key ? '✓' : '→'}</span></button>)}</section>
       <div className="results-grid" aria-live="polite" aria-atomic="true">
         <ResultCard label="Selected appointments" value={result.sample ? number(sample.n) : '—'} unit={'/ ' + number(sample.N)} detail={result.sample ? number(sample.n) + ' distinct records · no replacement' : 'No current sample: resolve the message below'} tone="blue" icon={Grid2X2} />
