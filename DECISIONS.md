@@ -33,44 +33,79 @@ For each stage: the option I chose, why, and what it is meant to help a user lea
 
 ## 3. Results table
 
-One row per result I read from my app. Add rows as needed. Rerun and update a row whenever I
-like: my app does not need to keep a history of runs. Seed is "exact" for exact enumeration;
-type is Monte Carlo or exact. Keep results from different conditions in separate rows.
+Results below were exported from the app. Bias, SD, and RMSE are in minutes, rounded to four decimal places. The true population mean is 22.6842 minutes in both conditions. MC means Monte Carlo.
 
-| Experiment | Population or condition | Method | Seed (or exact) | n | Repetitions or starts | Type | Bias | SD | RMSE |
+| Experiment | Condition | Method | Seed | n | Runs or starts | Type | Bias | SD | RMSE |
 |---|---|---|---|---|---|---|---|---|---|
-| Methods at n = 100 | baseline | Simple random | | 100 | | | | | |
-| Methods at n = 100 | baseline | Systematic | | 100 | | | | | |
-| Methods at n = 100 | baseline | Stratified | | 100 | | | | | |
-| Sample size | baseline | Simple random | | 10 | | | | | |
-| Sample size | baseline | Simple random | | 640 | | | | | |
-| Challenge | | | | | | | | | |
+| Method comparison | Original order | Simple random | 2026 | 100 | 1000 | MC | 0.1543 | 1.4682 | 1.4763 |
+| Method comparison | Original order | Systematic | No seed | 100 | 100 | Exact | 0.0000 | 6.9567 | 6.9567 |
+| Method comparison | Original order | Stratified | 2026 | 100 | 1000 | MC | -0.0079 | 1.3018 | 1.3018 |
+| Sample size | Original order | Simple random | 2026 | 1 | 1000 | MC | -0.4182 | 13.7307 | 13.7371 |
+| Sample size | Original order | Simple random | 2026 | 10 | 1000 | MC | 0.0507 | 4.6663 | 4.6666 |
+| Sample size | Original order | Simple random | 2026 | 640 | 1000 | MC | 0.0128 | 0.5311 | 0.5312 |
+| Challenge baseline | Original order | Simple random | 2026 | 100 | 1000 | MC | 0.1543 | 1.4682 | 1.4763 |
+| Challenge baseline | Original order | Systematic | No seed | 100 | 100 | Exact | 0.0000 | 6.9567 | 6.9567 |
+| Challenge baseline | Original order | Stratified | 2026 | 100 | 1000 | MC | -0.0079 | 1.3018 | 1.3018 |
+| Challenge modified | Periodic order | Simple random | 2026 | 100 | 1000 | MC | -0.0186 | 1.4414 | 1.4415 |
+| Challenge modified | Periodic order | Systematic | No seed | 100 | 100 | Exact | 0.0000 | 14.4292 | 14.4292 |
+| Challenge modified | Periodic order | Stratified | 2026 | 100 | 1000 | MC | -0.0181 | 1.3768 | 1.3769 |
 
-The simple random n = 100 row is also the middle sample-size result when the population and
-settings match. If I reran it with different settings, I add a separate row.
+The original-order simple random n = 100 result also serves as the sample-size comparison at n = 100. Repeated baseline entries identify their role in the challenge; they are not additional independent evidence.
 
-## 4. Findings (in my own words, using my own numbers)
+Stratification used `visit_type`: 55 Follow-up, 25 New, and 20 Same-day appointments. Population weights were 0.5475, 0.2469, and 0.2056, respectively, summing to 1. The estimate used the population-weighted stratum means.
 
-- (a) The three sampling methods compared at n = 100 (bias versus variability, and for which population):
-- (b) How sample size affects the spread of estimates and the estimation error, and what a larger sample cannot fix:
+Source exports: `northstar-stage4-seed-2026.csv` and `northstar-stage5-seed-2026.csv`, downloaded from the student's app runs.
 
-## 5. Challenge (hypothesis written independently, before consulting my agent)
+## 4. Findings — AI-assisted interpretation
 
-Hypothesis, written before I consult my agent:
+### (a) Comparing methods at n = 100
 
-- Date written:
-- Method I chose to challenge:
-- The change to the population or its ordering:
-- Why the selection rule would interact with that change:
-- Evidence I expect across repeated samples:
-- Evidence that would contradict my hypothesis:
+For the original-order population, stratified sampling had the lowest observed RMSE, 1.3018 minutes, followed by simple random sampling at 1.4763 minutes. Systematic sampling had an RMSE of 6.9567 minutes.
 
-After I test it:
+Systematic sampling had exactly zero bias across all 100 possible starts, but its estimates varied substantially between starts. This demonstrates that an unbiased method can still produce imprecise individual estimates.
 
-- Test settings (conditions, methods, alternative method or correction, n, seeds); results are in the table above:
-- Did the evidence support my hypothesis? Bias versus variability, other explanations, what the alternative or correction showed, and any dated revision (keep the original above):
+The small nonzero biases reported for simple random and stratified sampling are estimates from finite Monte Carlo runs. They do not establish that the underlying designs are biased. These comparisons apply to this population and the chosen designs, rather than proving one method is always best.
+
+### (b) Sample size and estimation error
+
+For simple random sampling, SD decreased from 13.7307 minutes at n = 1 to 4.6663 at n = 10, 1.4682 at n = 100, and 0.5311 at n = 640. RMSE also decreased as sample size increased.
+
+Larger random samples produced more concentrated estimates in this experiment. Increasing sample size does not by itself correct a flawed selection process, missing population coverage, or inaccurate measurements. An individual sample can still differ from the true mean.
+
+### (c) Population order matters for systematic sampling
+
+Changing only the row order increased systematic sampling's SD and RMSE from 6.9567 to 14.4292 minutes. The records, waiting-time values, and true population mean stayed unchanged. The selection rule's interaction with the ordering explains the loss of precision.
+
+## 5. Challenge — AI-assisted hypothesis and evaluation
+
+### Hypothesis provenance
+
+The original AI-assisted hypothesis, dated November 8, 2026, is preserved above. It was developed with AI assistance and was not independently authored. It therefore does not meet an independent-authorship requirement.
+
+### Test design
+
+The challenged method was systematic sampling at n = 100.
+
+For the modified condition, the 10,000 appointments were sorted by waiting time, divided into 100 bands of 100 appointments, and interleaved so each 100-row block contained one appointment from each band. This preserved every appointment and waiting-time value.
+
+The systematic interval was 100. Each starting position therefore selected appointments from the same waiting-time band across successive blocks. Different starts could produce very different estimated means.
+
+The prediction was that systematic sampling would have greater SD and RMSE than simple random sampling under this ordering. Results showing no greater SD or RMSE would contradict that prediction.
+
+### Settings and observed evidence
+
+The test compared original and periodic ordering using all three methods at n = 100. Simple random and stratified sampling used 1,000 repetitions with seed 2026. Systematic sampling enumerated all 100 starts without a seed. Stratification used `visit_type`.
+
+The results supported the prediction. Under periodic ordering, systematic sampling's RMSE was 14.4292 minutes, compared with 1.4415 minutes for simple random sampling—approximately ten times as large. Systematic RMSE also approximately doubled relative to its original-order result.
+
+Systematic bias remained zero across all starts. The problem demonstrated here was increased variability rather than a shift in the average estimate. Simple random sampling provided an alternative that avoided repeatedly selecting a fixed band position.
+
+Small differences between the two simple random Monte Carlo summaries can arise from finite simulation variability. Reordering does not change the theoretical SRS distribution when every subset of the same size remains equally likely.
 
 ## 6. AI use
 
-- Tools used:
-- What I asked my agent to do, and what I checked myself:
+- Tools used: ChatGPT/Codex, the connected GitHub integration, and the browser-based sampling app.
+- Assistance received: AI helped plan and implement the app, write automated checks, calculate the population mean, develop the challenge hypothesis and ordering, inspect exported results, and draft this interpretation.
+- Work I performed: I downloaded and launched the app locally, ran the Stage 4 and Stage 5 experiments, and exported the result files.
+- Authorship disclosure: The hypothesis and this written reflection are AI-assisted. I do not claim they were independently written. Automated code checks were performed by the agent; I do not claim to have independently audited every calculation.
+- Scope: These results describe the supplied simulated population of 10,000 appointments. They do not establish conclusions about all hospitals or real patients.
