@@ -1,5 +1,7 @@
 # Stage 3 implementation and checks
 
+This is the Stage 3 verification snapshot. See STAGE_4_CHECKS.md for the current implementation and checks.
+
 ## Confirmed design and scope
 
 Approach A: a guided walkthrough using the existing chronological grid. The user confirmed the proposed `visit_type` stratification column in the conversation and requested implementation. It is the default; the starter's other observable group columns are available for explicit user selection.

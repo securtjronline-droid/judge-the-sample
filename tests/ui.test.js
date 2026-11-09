@@ -149,6 +149,10 @@ test('hospital-to-lab journey and all three guided methods, including fractional
     await input('sample-size', '10001');
     assert.match(document.getElementById('seed-error').textContent, /from 1 to 10000/);
     assert.equal(document.querySelector('.result-coral strong').textContent, '—');
+    await clickText('Open Stage 4 experiments');
+    assert.match(document.querySelector('h1').textContent, /distribution/);
+    assert.ok(document.querySelector('.experiment-empty'));
+    assert.equal(document.querySelector('.experiment-results'), null);
   } finally {
     if (root && act) await act(async () => root.unmount());
     if (server) await server.close();

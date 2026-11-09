@@ -52,6 +52,6 @@ Dependencies are pinned in `package.json` and `package-lock.json`. Use `npm ci` 
 
 ## Assignment workflow
 
-The student uses the running Stage 3 app to explore selection rules, records decisions and evidence in `DECISIONS.md`, and confirms later design choices before implementation. Stage 3 does not run repeated-sampling experiments or generate a challenge hypothesis.
+The student explores selection rules in Stage 3, runs Stage 4 experiments by clicking Run experiments, and records results and interpretations in `DECISIONS.md`. Stage 4 does not generate the independent Stage 5 hypothesis or select its challenge controls.
 
 Python/Streamlit files are retained as legacy source. Python is not needed by the new launcher.
