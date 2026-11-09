@@ -5,13 +5,13 @@ my agent about it, and do not edit it afterwards; add a dated revision below ins
 
 ## 1. Population and target
 
-- Scenario and file:
-- One row means:
-- Number of rows (N):
-- Row order, and what it means in this file:
-- Target column and units:
-- My finite population is (and what it is not):
-- True mean I calculated (and how):
+- Scenario and file: Clinic waiting times — data/clinic_visits.csv.
+- One row means: One simulated clinic appointment.
+- Number of rows (N): 10,000 appointments.
+- Row order, and what it means in this file: Chronological order by week, then weekday from Monday to Friday, then appointment slot from 1 to 20. Neighboring rows represent neighboring appointments.
+- Target column and units: wait_time, measured in minutes waited after the scheduled appointment time.
+- My finite population is (and what it is not): The 10,000 simulated appointments contained in this CSV, covering 100 weeks. It does not represent all patients, all clinics, or appointments outside this file.
+- True mean I calculated (and how): 22.6842 minutes. Calculated with AI assistance using the arithmetic mean: sum all 10,000 values in the wait_time column (226,842 minutes), then divide by 10,000 appointments.
 
 ## 2. Design choices
 
