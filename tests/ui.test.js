@@ -1,0 +1,103 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { JSDOM } from 'jsdom';
+import { createServer } from 'vite';
+import { parseClinicCsv } from '../src/lib/population.js';
+import { temporarySample } from '../src/lib/sampling.js';
+
+// A DOM integration test, not a substitute for visual browser review.
+test('hospital-to-lab journey, row inspection, selection binding, seeds, and pagination', { timeout: 30000 }, async () => {
+  const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', { url: 'http://localhost/' });
+  const previous = new Map();
+  let paints = 0, outlines = 0;
+  const context = { scale() {}, fillRect() { paints += 1; }, strokeRect() { outlines += 1; } };
+  dom.window.HTMLCanvasElement.prototype.getContext = () => context;
+  dom.window.HTMLCanvasElement.prototype.getBoundingClientRect = () => ({ width: 600, height: 475, left: 0, top: 0, right: 600, bottom: 475 });
+  dom.window.scrollTo = () => {};
+  const overrides = {
+    window: dom.window, document: dom.window.document, navigator: dom.window.navigator,
+    HTMLElement: dom.window.HTMLElement, Node: dom.window.Node, Event: dom.window.Event,
+    IS_REACT_ACT_ENVIRONMENT: true,
+    ResizeObserver: class { constructor(callback) { this.callback = callback; } observe() { this.callback(); } disconnect() {} },
+  };
+  for (const [name, value] of Object.entries(overrides)) {
+    previous.set(name, Object.getOwnPropertyDescriptor(globalThis, name));
+    Object.defineProperty(globalThis, name, { configurable: true, writable: true, value });
+  }
+  let server, root, act;
+  try {
+    server = await createServer({ server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' });
+    const React = await import('react');
+    act = React.act;
+    const { createRoot } = await import('react-dom/client');
+    const { default: App } = await server.ssrLoadModule('/src/App.jsx');
+    const rows = parseClinicCsv(await readFile(new URL('../data/clinic_visits.csv', import.meta.url), 'utf8'));
+    const document = dom.window.document;
+    const pause = () => new Promise(resolve => setTimeout(resolve, 20));
+    async function interact(callback) { await act(async () => { callback(); await pause(); }); }
+    async function clickText(text) {
+      const button = [...document.querySelectorAll('button')].find(node => node.textContent.trim() === text);
+      assert.ok(button, 'Button exists: ' + text);
+      await interact(() => button.click());
+    }
+    async function input(id, value) {
+      const field = document.getElementById(id);
+      const setter = Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype, 'value').set;
+      await interact(() => {
+        setter.call(field, value);
+        field.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+        field.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+      });
+    }
+    async function submit(selector) {
+      await interact(() => document.querySelector(selector).dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true })));
+    }
+    const selectedIds = () => [...document.querySelectorAll('.selected-records tbody th')].map(node => Number(node.textContent.trim()));
+    const expectedIds = seed => [...temporarySample(rows, seed).indices].sort((a, b) => a - b).map(i => rows[i].visit_id);
+    root = createRoot(document.getElementById('root'));
+    await interact(() => root.render(React.createElement(App)));
+    for (let i = 0; i < 15 && !document.querySelector('.hospital-hero'); i += 1) await interact(() => {});
+    assert.match(document.querySelector('h1').textContent, /clearer view of care/);
+    await clickText('Open a simulated chart');
+    assert.equal(document.querySelector('.wait-value strong').textContent, String(rows[0].wait_time));
+    const overviewTab = document.getElementById('overview-tab');
+    await interact(() => overviewTab.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })));
+    assert.equal(document.getElementById('details-tab').getAttribute('aria-selected'), 'true');
+    assert.match(document.querySelector('#chart-panel').textContent, /visit_id/);
+    await clickText('Quality & Safety / Research & Analytics');
+    assert.match(document.querySelector('h1').textContent, /Research & Analytics/);
+    await clickText('Launch Sampling Lab');
+    assert.match(document.querySelector('.temporary-banner').textContent, /Temporary simple random sample/);
+    assert.equal(document.querySelectorAll('canvas').length, 1);
+    assert.ok(paints >= 10000, 'Every population row receives a grid mark.');
+    assert.ok(outlines >= 100, 'Selected rows receive outlines as well as color.');
+    assert.deepEqual(selectedIds(), expectedIds(2026).slice(0, 10));
+    assert.match(document.querySelector('.result-yellow').textContent, /22.6842/);
+    assert.match(document.querySelector('.result-coral').textContent, new RegExp(temporarySample(rows, 2026).estimate.toFixed(4).replace('.', '\\.')));
+    await input('row-number', '640');
+    await submit('.row-search');
+    assert.match(document.querySelector('.inspector-record-top').textContent, /AP-00640/);
+    assert.equal(document.querySelector('.inspector-wait strong').textContent.trim(), rows[639].wait_time + ' min');
+    assert.deepEqual(selectedIds(), expectedIds(2026).slice(0, 10), 'Inspection leaves sample membership unchanged.');
+    await clickText('Next seed');
+    assert.deepEqual(selectedIds(), expectedIds(2027).slice(0, 10));
+    await input('seed', '2026');
+    await submit('.seed-controls');
+    assert.deepEqual(selectedIds(), expectedIds(2026).slice(0, 10), 'Restoring a seed restores the selected IDs.');
+    await input('seed', '-1');
+    await submit('.seed-controls');
+    assert.match(document.getElementById('seed-error').textContent, /whole-number seed/);
+    assert.deepEqual(selectedIds(), expectedIds(2026).slice(0, 10), 'Invalid input leaves the current valid sample intact.');
+    await interact(() => document.querySelector('[aria-label="Next selected records"]').click());
+    assert.deepEqual(selectedIds(), expectedIds(2026).slice(10, 20));
+  } finally {
+    if (root && act) await act(async () => root.unmount());
+    if (server) await server.close();
+    dom.window.close();
+    for (const [name, descriptor] of previous) {
+      if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+      else delete globalThis[name];
+    }
+  }
+});
